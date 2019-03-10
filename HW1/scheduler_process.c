@@ -1,3 +1,9 @@
+/*
+ * Kendall Molas
+ * CSc 33200
+ * Project 1
+ * Professor Gordon
+ */
 #include <stdio.h> 
 #include <string.h> 
 #include <stdlib.h>
@@ -113,7 +119,8 @@ void interpret_data_from_text_file(char *file, Queue *q) {
     fclose(fp);
 }
 
-// Debugging
+// Debugging purposes
+// Display content of current queue
 void current_queue(Queue *q) {
     for (int i = 0; i < q->current_size; i++) {
         if (q->queue_size[i] != NULL)
@@ -123,34 +130,29 @@ void current_queue(Queue *q) {
     }
 }
 
+// Add PCB into ready queue
 void enqueue(Queue *q, PCB *p) {
-    int r = q->current_size - 1;
     if (p->est_remaining_run_time > 0) {
         printf("Process [%s] has returned to queue\n", p->process_name);
-        q->queue_size[r] = p;
-    }
-    else {
-        printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
-        q->queue_size[r] = NULL;
-        //q->current_size--;
-        printf("\nRemaining items in queue %d items:\n", q->current_size);
+        q->queue_size[q->rear] = p;
     }
 }
 
+// Remove PCB from ready queue
 PCB *dequeue(Queue *q) {
     q->front = 0;
     q->rear = q->current_size - 1;
     PCB *dequeued_process = q->queue_size[q->front];
    
     // Move n-1 processes forward
-    if (q->queue_size[q->current_size] != NULL) {
+    if (q->queue_size[q->current_size-1] != NULL) {
         for (int i = 0; i < q->current_size - 1; i++) {
             q->queue_size[i] = q->queue_size[i+1];
         }
+        q->queue_size[q->rear] = NULL;
 
     }
     printf("\nProcess [%s]: dequeued\n", dequeued_process->process_name);
-    //q->queue_size[q->rear] = NULL;
 
     return dequeued_process;
 }
@@ -166,17 +168,18 @@ int main() {
 
     mkfifo(link, 0666);
 
-    char buffer[7][100]; // Same size as BLOCK
+    // Make buffer same size as block, 7 items that hold lengths of up to 100.
+    char buffer[7][100]; 
     int counter = 1;
-    while (counter != 24) {
+
+    while (queue.current_size != 0) {
         // Create a pointer to the dequeued PCB
         printf("Ran %d time(s):\n", counter);
-        //current_queue(&queue);
         PCB *p = dequeue(&queue);
         // Copy from process block to buffer to send to named pipe
         memcpy(buffer, p->BLOCK, sizeof(p->BLOCK));
         current_queue(&queue);
-        printf("%s\n", p->BLOCK[6]);
+        //printf("%s\n", p->BLOCK[6]);
         fd = open(link, O_WRONLY);
         write(fd, buffer, sizeof(buffer));
         close(fd);

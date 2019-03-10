@@ -1,3 +1,9 @@
+/*
+ * Kendall Molas
+ * CSc 33200
+ * Project 1
+ * Professor Gordon
+ */
 #include <stdio.h> 
 #include <string.h> 
 #include <stdlib.h>
