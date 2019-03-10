@@ -1,0 +1,89 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define NUMBER_OF_PCBS 7
+#define CHARACTER_LENGTH 80
+#define BUFFER_SIZE 120
+
+typedef struct queue Queue;
+typedef struct process_control_block PCB;
+
+void interpret_data_from_text_file(char *file, Queue *queue);
+
+typedef struct process_control_block {
+    char process_name;
+    int pid;
+    char state;
+    int priority;
+    int is_interruptable;
+    int est_total_run_time;
+    int est_remaining_run_time;
+
+} PCB;
+
+typedef struct queue {
+    PCB *queue_size[NUMBER_OF_PCBS];
+    int front;
+    int rear;
+    size_t current_size;
+} Queue;
+
+void enqueue(Queue *q, PCB *process) {
+    size_t size = sizeof(q->queue_size)/sizeof(q->queue_size[0]);
+    
+    if (q->queue_size[current_size] == NULL && q->current_size < size) {
+        q->queue_size[current_size] = process;
+        q->current_size++;
+    }
+}
+
+void interpret_data_from_text_file(char *file, Queue *queue) {
+    FILE *fp;
+    char *process_pointer;
+    PCB *p = malloc(sizeof(PCB));
+
+    fp = fopen(file, "r");
+
+    if (fp == NULL) {
+        perror("Error while opening the file.\n");
+        exit(EXIT_FAILURE);
+    }
+    else {
+        printf("Working\n");
+    }
+
+    int counter = 0;
+    char file_buffer[BUFFER_SIZE]; 
+
+    while (fgets(file_buffer, BUFFER_SIZE, fp)) {
+        process_pointer = strtok(file_buffer, ",");
+        p->process_name = *process_pointer;
+
+        process_pointer = strtok(NULL, ",");
+        p->pid = atoi(process_pointer);
+
+        process_pointer = strtok(NULL, ",");
+        p->state = process_pointer;
+
+        process_pointer = strtok(NULL, ",");
+        p->priority = atoi(process_pointer);
+
+        process_pointer = strtok(NULL, ",");
+        p->is_interruptable = atoi(process_pointer);
+
+        process_pointer = strtok(NULL, ",");
+        p->est_total_run_time = atoi(process_pointer);
+
+        process_pointer = strtok(NULL, ",");
+        p->est_remaining_run_time= atoi(process_pointer);
+
+        enqueue(process, queue);
+    }
+}
+
+int main() {
+    char *file_name = {"processes.txt"};
+    Queue queue = {NULL};
+    interpret_data_from_text_file(file_name, &queue);
+}
