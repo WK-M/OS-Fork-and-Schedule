@@ -19,8 +19,13 @@
 typedef struct queue Queue;
 typedef struct process_control_block PCB;
 
+// Self-defined boolean
 typedef enum {false, true} bool;
 
+/* Data Structures
+ * PCB - holds info for the processes
+ * Queue - holds a fixed amount of PCBs
+ */
 typedef struct process_control_block {
     char process_name[5];
     int pid;
@@ -199,7 +204,6 @@ int main() {
             p = NULL;
             queue.current_size--;
         }
-        //current_queue(&queue);
         printf("\n");
         current_queue(&queue);
         close(fd);
