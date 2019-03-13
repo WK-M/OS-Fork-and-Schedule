@@ -35,7 +35,9 @@ int main() {
         if (strlen(RECEIVED_PCB_INFO[0]) == 0) {
             break;
         }
-        printf("Ran %d time(s):\n", counter);
+        printf("-------------\n");
+        printf("IN CPU EMULATOR:\n");
+        printf("\nRan %d time(s):\n", counter);
 
         int current_time = strtol(RECEIVED_PCB_INFO[6], NULL, 10);
         printf("Process: [%s], Current Run time is: [%d]\n", RECEIVED_PCB_INFO[0], current_time);

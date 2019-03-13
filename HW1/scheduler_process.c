@@ -182,6 +182,8 @@ int main() {
     int counter = 1;
 
     while (ready_queue.current_size != 0) {
+        printf("-------------\n");
+        printf("IN SCHEDULER PROCESS\n");
         // Create a pointer to the dequeued PCB
         printf("Ran %d time(s):\n", counter);
         PCB *p = dequeue(&ready_queue);
@@ -192,7 +194,7 @@ int main() {
         write(fd, buffer, sizeof(buffer));
         close(fd);
 
-        printf("\n");
+        //printf("\n");
 
         fd = open(link, O_RDONLY);
         read(fd, buffer, sizeof(buffer));
@@ -207,7 +209,6 @@ int main() {
             p = NULL;
             ready_queue.current_size--;
         }
-        printf("\n");
         current_queue(&ready_queue);
         close(fd);
         printf("-------------\n");
