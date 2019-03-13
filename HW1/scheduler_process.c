@@ -147,7 +147,7 @@ void enqueue(Queue *q, PCB *p) {
     }
 }
 
-// Remove PCB from ready queue
+// Returns PCB in the front of the queue
 PCB *dequeue(Queue *q) {
     q->front = 0;
     q->rear = q->current_size - 1;
@@ -169,12 +169,15 @@ PCB *dequeue(Queue *q) {
 int main() {
     char *file_name = {"processes.txt"};
     Queue ready_queue = {NULL};
+
+    // Read in data from the processes.txt and store into queue
     interpret_data_from_text_file(file_name, &ready_queue);
     printf("%d processes added to queue..\n", ready_queue.current_size);
 
     char *link = "/tmp/kendall_project_link";
     int fd;
 
+    // Establish link
     mkfifo(link, 0666);
 
     // Make buffer same size as block, 7 items that hold lengths of up to 100.
@@ -184,26 +187,32 @@ int main() {
     while (ready_queue.current_size != 0) {
         printf("-------------\n");
         printf("IN SCHEDULER PROCESS\n");
-        // Create a pointer to the dequeued PCB
         printf("Ran %d time(s):\n", counter);
+
+        // Create a pointer to the dequeued PCB
         PCB *p = dequeue(&ready_queue);
         // Copy from process block to buffer to send to named pipe
         memcpy(buffer, p->BLOCK, sizeof(p->BLOCK));
         current_queue(&ready_queue);
+
+        // Open named pipe to send PCB that was dequeued to the CPU Emulator
         fd = open(link, O_WRONLY);
         write(fd, buffer, sizeof(buffer));
         close(fd);
 
-        //printf("\n");
-
+        // Receive updated PCB from the CPU Emulator
         fd = open(link, O_RDONLY);
         read(fd, buffer, sizeof(buffer));
+
+        // Read file from buffer and store it into the BLOCK array
         memcpy(p->BLOCK, buffer, sizeof(p->BLOCK));
         p->est_remaining_run_time = strtol(p->BLOCK[6], NULL, 0);
 
+        // If the remaining running time is not zero, we add it back into the queue
         if (p->est_remaining_run_time != 0) {
             enqueue(&ready_queue, p);
         }
+        // Otherwise, remove it from the queue and decrement the queue size
         else {
             printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
             p = NULL;
@@ -215,6 +224,7 @@ int main() {
         counter++;
     }
 
+    // Send a NULL message to the CPU Emulator to dictate that queue is empty
     memset(buffer, 0, sizeof(buffer));
     fd = open(link, O_WRONLY);
     write(fd, buffer, sizeof(buffer));
