@@ -38,19 +38,19 @@ int main() {
         printf("Ran %d time(s):\n", counter);
 
         int current_time = strtol(RECEIVED_PCB_INFO[6], NULL, 10);
-        printf("Process: %s, Current Run time is: %d\n", RECEIVED_PCB_INFO[0], current_time);
+        printf("Process: [%s], Current Run time is: [%d]\n", RECEIVED_PCB_INFO[0], current_time);
         int updated_run_time = update_PCB_run_time(time_quantum, current_time);
         sprintf(RECEIVED_PCB_INFO[6], "%d", updated_run_time);
         close(fd1);
 
         fd1 = open(link, O_WRONLY);
         write(fd1, RECEIVED_PCB_INFO, sizeof(RECEIVED_PCB_INFO));
-        printf("Process: %s, New Run time is: %s\n", RECEIVED_PCB_INFO[0],RECEIVED_PCB_INFO[6]);
-        printf("----------------\n");
+        printf("Process: [%s], New Run time is: [%s]\n", RECEIVED_PCB_INFO[0],RECEIVED_PCB_INFO[6]);
+        printf("-------------\n");
         close(fd1);
         counter++;
     }
-    printf("CPU EMULATOR ENDING...");
+    printf("CPU EMULATOR ENDING...\n");
     return 0;
 }
 

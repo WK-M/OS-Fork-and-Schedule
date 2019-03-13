@@ -35,13 +35,13 @@ typedef struct process_control_block {
     int est_total_run_time;
     int est_remaining_run_time;
 
-    // Ask if this is ok
+    // Used for passing into named pipe
     char BLOCK[7][100];
 } PCB;
 
 typedef struct queue {
     PCB *queue_size[NUMBER_OF_PCBS];
-    int front;
+    unsigned int front;
     int rear;
     unsigned int current_size;
 } Queue;
@@ -168,9 +168,9 @@ PCB *dequeue(Queue *q) {
 
 int main() {
     char *file_name = {"processes.txt"};
-    Queue queue = {NULL};
-    interpret_data_from_text_file(file_name, &queue);
-    printf("%d processes added to queue..\n", queue.current_size);
+    Queue ready_queue = {NULL};
+    interpret_data_from_text_file(file_name, &ready_queue);
+    printf("%d processes added to queue..\n", ready_queue.current_size);
 
     char *link = "/tmp/kendall_project_link";
     int fd;
@@ -181,14 +181,13 @@ int main() {
     char buffer[7][100]; 
     int counter = 1;
 
-    while (queue.current_size != 0) {
+    while (ready_queue.current_size != 0) {
         // Create a pointer to the dequeued PCB
         printf("Ran %d time(s):\n", counter);
-        PCB *p = dequeue(&queue);
+        PCB *p = dequeue(&ready_queue);
         // Copy from process block to buffer to send to named pipe
         memcpy(buffer, p->BLOCK, sizeof(p->BLOCK));
-        current_queue(&queue);
-        //printf("%s\n", p->BLOCK[6]);
+        current_queue(&ready_queue);
         fd = open(link, O_WRONLY);
         write(fd, buffer, sizeof(buffer));
         close(fd);
@@ -201,15 +200,15 @@ int main() {
         p->est_remaining_run_time = strtol(p->BLOCK[6], NULL, 0);
 
         if (p->est_remaining_run_time != 0) {
-            enqueue(&queue, p);
+            enqueue(&ready_queue, p);
         }
         else {
             printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
             p = NULL;
-            queue.current_size--;
+            ready_queue.current_size--;
         }
         printf("\n");
-        current_queue(&queue);
+        current_queue(&ready_queue);
         close(fd);
         printf("-------------\n");
         counter++;
@@ -219,6 +218,6 @@ int main() {
     fd = open(link, O_WRONLY);
     write(fd, buffer, sizeof(buffer));
     close(fd);
-    printf("SCHEDULER ENDING...");
+    printf("SCHEDULER ENDING...\n");
     return 0;
 }
