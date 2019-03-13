@@ -34,6 +34,8 @@ typedef struct process_control_block {
     int is_interruptable;
     int est_total_run_time;
     int est_remaining_run_time;
+
+    // Ask if this is ok
     char BLOCK[7][100];
 } PCB;
 
@@ -116,6 +118,8 @@ void interpret_data_from_text_file(char *file, Queue *q) {
             sprintf(p->BLOCK[4], "%d", p->is_interruptable);
             sprintf(p->BLOCK[5], "%d", p->est_total_run_time);
             sprintf(p->BLOCK[6], "%d", p->est_remaining_run_time);
+
+            // Enqueue process
             q->queue_size[q->current_size] = p;
             process_information_retreived = false;
             q->current_size++;
@@ -210,4 +214,11 @@ int main() {
         printf("-------------\n");
         counter++;
     }
+
+    memset(buffer, 0, sizeof(buffer));
+    fd = open(link, O_WRONLY);
+    write(fd, buffer, sizeof(buffer));
+    close(fd);
+    printf("SCHEDULER ENDING...");
+    return 0;
 }

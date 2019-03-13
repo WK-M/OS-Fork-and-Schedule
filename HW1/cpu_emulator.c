@@ -21,7 +21,7 @@ int update_PCB_run_time(int time_quantum, int est_remaining_run_time) {
 }
 
 int main() {
-    int time_quantum = 80, fd1;
+    int time_quantum = 200, fd1;
 
     char *link = "/tmp/kendall_project_link";
 
@@ -32,6 +32,9 @@ int main() {
     while (1) {
         fd1 = open(link, O_RDONLY);
         read(fd1, RECEIVED_PCB_INFO, sizeof(RECEIVED_PCB_INFO));
+        if (strlen(RECEIVED_PCB_INFO[0]) == 0) {
+            break;
+        }
         printf("Ran %d time(s):\n", counter);
 
         int current_time = strtol(RECEIVED_PCB_INFO[6], NULL, 10);
@@ -47,7 +50,7 @@ int main() {
         close(fd1);
         counter++;
     }
-
+    printf("CPU EMULATOR ENDING...");
     return 0;
 }
 
