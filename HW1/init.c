@@ -1,3 +1,9 @@
+/*
+ * Kendall Molas
+ * CSc 33200
+ * Project 1
+ * Professor Gordon
+ */
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -5,6 +11,7 @@
 
 int main() {
 
+    // Commands to execute file
     char *done_one[] = {"./cpu_emulator", NULL};
     char *done_two[] = {"./scheduler_process", NULL};
 
@@ -22,9 +29,12 @@ int main() {
         }
     }
     else  {
+        // Wait for both programs to finish and then kill parent process
         waitpid(execute_program_0, &status, 0);
         waitpid(execute_program_1, &status, 0);
     }
+
+    printf("Both programs finished running, exiting init...\n");
 
     return 0;
 }

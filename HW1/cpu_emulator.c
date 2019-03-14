@@ -14,10 +14,7 @@
 #include <unistd.h> 
 
 int update_PCB_run_time(int time_quantum, int est_remaining_run_time) {
-    printf("%d\n", est_remaining_run_time - time_quantum);
-    if (est_remaining_run_time - time_quantum > 0)
-        return est_remaining_run_time - time_quantum;
-    return 0;
+    return est_remaining_run_time - time_quantum;
 }
 
 int main() {

@@ -209,7 +209,7 @@ int main() {
         p->est_remaining_run_time = strtol(p->BLOCK[6], NULL, 0);
 
         // If the remaining running time is not zero, we add it back into the queue
-        if (p->est_remaining_run_time != 0) {
+        if (p->est_remaining_run_time > 0) {
             enqueue(&ready_queue, p);
         }
         // Otherwise, remove it from the queue and decrement the queue size

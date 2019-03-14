@@ -1,0 +1,18 @@
+\documentclass[a4paper,11pt]{report}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+
+\title{Assignment 1}
+\author{Kendall Molas}
+
+\begin{document}
+
+\maketitle
+
+\section*{Summary}
+
+In this assignment, I created three programs: init, cpu\_emulator, and scheduler\_process. In this program, we had to utilize IPC (Interprocess Communication) by allowing two programs to send and receive information to each other. The two processes that communicated with one another were cpu\_emulator and scheduler\_process. The cpu\_emulator and the scheduler\_process programs communicated with one another with the use of a named pipe. I used a named pipe for this project because for the purposes of this project, I knew the two executables (cpu\_emulator, scheduler\_process) would remain on this system. Also, I wanted to enforce a unidirectional pipe. After doing some research, there was some benchmark testing which shows that named pipes were 16 faster than sockets.\footnote{\url{https://stackoverflow.com/a/54164058}}
+
+\end{document}
