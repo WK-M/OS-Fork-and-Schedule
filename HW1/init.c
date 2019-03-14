@@ -13,7 +13,7 @@ int main() {
 
     // Commands to execute file
     char *done_one[] = {"./cpu_emulator", NULL};
-    char *done_two[] = {"./scheduler_process", NULL};
+    char *done_two[] = {"./scheduler", NULL};
 
 
     int status;
