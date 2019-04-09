@@ -9,7 +9,8 @@
 #define BUFF_SIZE 40
 #define MAX_SIZE 120
 
-int append_items(char *number_list, FILE *to_be_read_file, int counter);
+int append_items(int *number_list, FILE *to_be_read_file, int counter);
+void sort_values(int *number_list);
 
 /* @param: 
  * buffer: array with values read from a previous text file
@@ -19,7 +20,12 @@ int append_items(char *number_list, FILE *to_be_read_file, int counter);
  * updated counter loop
  */
 
-int append_items(char *number_list, FILE *to_be_read_file, int counter) {
+// Implementation of quicksort
+void sort_values(int *number_list) {
+
+}
+
+int append_items(int *number_list, FILE *to_be_read_file, int counter) {
     int num;
     char newline = getc(to_be_read_file);
     while (newline != EOF) { // check if its not end of file
@@ -49,14 +55,14 @@ int main(int argc, char *argv[]) {
     }
 
     // newx.dat
-    FILE *main_file = fopen(argv[0], "a");
+    FILE *main_file = fopen(argv[0], "wb");
     if (main_file == NULL) {
         printf("Error, %s cannot be opened", argv[0]);
         exit(0);
     }
 
     char buffer[BUFF_SIZE];
-    char read_content[MAX_SIZE];
+    int read_content[MAX_SIZE];
 
     // If file is already locked, busy wait
     while (flock(fileno(main_file), LOCK_EX) == -1) {
@@ -67,10 +73,22 @@ int main(int argc, char *argv[]) {
         // Do work here
         int size = sizeof(read_content)/sizeof(read_content[0]);
         int count = 0; // Holds current number of items read
+
+        // Add items into array
         count = append_items(read_content, read_file, count);
         count = append_items(read_content, main_file, count);
+        fclose(main_file);
 
+        // After adding all the items into the array, and given a total number of items we have into our array.
+        // Sort the array
+        sort_values(read_content);
 
+        // Now let's write it back to the main file
+        for (int i = 0; i < count; i++) {
+            fwrite(read_content, sizeof(int), sizeof(read_content), read_file);
+        }
+        fclose(read_file);
+        
 
         // find number of lines in file
         /*int counter = 0, num;
@@ -97,7 +115,6 @@ int main(int argc, char *argv[]) {
 
         }*/
         //
-
     }
     return 0;
 }
