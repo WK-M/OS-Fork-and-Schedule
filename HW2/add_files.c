@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/file.h>
-#define   LOCK_SH   1    /* shared lock */
-#define   LOCK_EX   2    /* exclusive lock */
-#define   LOCK_NB   4    /* don't block when locking */
-#define   LOCK_UN   8    /* unlock */
+#define LOCK_SH   1    /* shared lock */
+#define LOCK_EX   2    /* exclusive lock */
+#define LOCK_NB   4    /* don't block when locking */
+#define LOCK_UN   8    /* unlock */
 #define BUFF_SIZE 40
 #define MAX_SIZE 120
 
@@ -85,8 +85,8 @@ int main(int argc, char *argv[]) {
         int count = 0; // Holds current number of items read
 
         // Add items into array
-        count = append_items(&read_content, read_file, count);
-        count = append_items(&read_content, main_file, count);
+        count = append_items(read_content, read_file, count);
+        count = append_items(read_content, main_file, count);
         fclose(main_file);
 
         // After adding all the items into the array, and given a total number of items we have into our array.
