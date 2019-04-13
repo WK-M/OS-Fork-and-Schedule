@@ -47,6 +47,8 @@ int read_numbers(int *number_list, FILE *to_be_read_file) {
  */
 void *combine_arrays(int *to_be_merged, int *data, int total) {
     int arr[total];
+    // i - for merged
+    // j - for main data file
     int counter = 0, i = 0, j = 0; // Loop counter
     int merge_total = sizeof(to_be_merged)/sizeof(to_be_merged[0]);
     int data_total = sizeof(data)/sizeof(data[0]);
