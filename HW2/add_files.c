@@ -12,14 +12,6 @@ int read_numbers(int *number_list, FILE *to_be_read_file);
 void sort_values(int number_list[], int total);
 void *combine_arrays(int *to_be_merged, int *data, int total);
 
-/* @param: 
- * buffer: array with values read from a previous text file
- * counter: current index
- *
- * return:
- * updated counter loop
- */
-
 // Implementation of Insertion Sort
 void sort_values(int *number_list, int total) {
     for (int i = 0; i < total; i++) {
@@ -35,14 +27,24 @@ void sort_values(int *number_list, int total) {
     }
 }
 
+// @param:
+// number_list: array for values to be read from the text file
+// to_be_read_file: newx.dat
 int read_numbers(int *number_list, FILE *to_be_read_file) {
-    int counter = 0;;
+    int counter = 0;
     while (fscanf(to_be_read_file, "%ld", &number_list[counter]) != EOF) {
         counter++;
     }
     return counter;
 }
 
+/* @param: 
+ * buffer: array with values read from a previous text file
+ * counter: current index
+ *
+ * return:
+ * updated counter loop
+ */
 void *combine_arrays(int *to_be_merged, int *data, int total) {
     int arr[total];
     int counter = 0, i = 0, j = 0; // Loop counter
@@ -50,37 +52,55 @@ void *combine_arrays(int *to_be_merged, int *data, int total) {
     int data_total = sizeof(data)/sizeof(data[0]);
 
     // i > j
-    if (merge_total < data_total) {
+    if (merge_total > data_total) {
         while (i < merge_total) {
+            if ((to_be_merged[i] < data[j]) && j < data_total){
+                arr[counter] = to_be_merged[i];
+                i++;
+            }
+            else if ((to_be_merged[i] >= data[j]) && j < data_total) {
+                arr[counter] = data[j];
+                j++;
+            }
+            else {
+                arr[counter] = to_be_merged[i];
+                i++;
+            }
+            counter++;
+        }
+    }
+    // i < j
+    else if (merge_total < data_total) {
+        while (j < data_total) {
+            if ((to_be_merged[i] < data[j]) && i < merge_total) {
+                arr[counter] = to_be_merged[i];
+                i++;
+            }
+            else if ((to_be_merged[i] > data[j]) && i < merge_total) {
+                arr[counter] = data[j];
+                j++;
+            }
+            else {
+                arr[counter] = to_be_merged[j];
+                j++;
+            }
+            counter++;
+        }
+    }
+    // i == j
+    else {
+        while (data_total == merge_total) {
             if (to_be_merged[i] < data[j]) {
                 arr[counter] = to_be_merged[i];
                 i++;
-                counter++;
             }
             else {
                 arr[counter] = data[j];
                 j++;
-                counter++;
             }
+            counter++;
         }
-
-
     }
-
-    // i < j
-    else if (merge_total > data_total) {
-        while (j < data_total) {
-            arr[counter] = 
-        }
-
-    }
-
-    // i == j
-    else {
-
-    }
-
-
 }
 
 int main(int argc, char *argv[]) {
@@ -101,7 +121,6 @@ int main(int argc, char *argv[]) {
     }
     
     if (flock(fileno(main_file), LOCK_EX) != -1) { // Lock released, try to obtain lock
-        // Do work here
         // Add numbers from newx.dat into array
         // And get the total number of items in newx.dat
         int count = 0;
