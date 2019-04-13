@@ -2,8 +2,9 @@
 #include <stdlib.h>
 
 void affect_array(int *arr, int size) {
-    arr[0] = 3;
-    arr[1] = 22;
+    for (int i = 0; i < size; i++) {
+        arr[i] = 22;
+    }
 }
 
 int main() {
