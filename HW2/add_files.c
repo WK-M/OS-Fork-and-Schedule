@@ -50,7 +50,7 @@ void *combine_arrays(int *to_be_merged, int *data, int total) {
     int data_total = sizeof(data)/sizeof(data[0]);
 
     // i > j
-    if (merge_total > data_total) {
+    if (merge_total < data_total) {
         while (i < merge_total) {
             if (to_be_merged[i] < data[j]) {
                 arr[counter] = to_be_merged[i];
@@ -63,10 +63,12 @@ void *combine_arrays(int *to_be_merged, int *data, int total) {
                 counter++;
             }
         }
+
+
     }
 
     // i < j
-    else if (merge_total < data_total) {
+    else if (merge_total > data_total) {
         while (j < data_total) {
             arr[counter] = 
         }
