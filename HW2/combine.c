@@ -1,63 +1,39 @@
 #include <stdio.h>
 
-int *combine_arrays(int *to_be_merged, int *data, int total) {
-    printf("t\n");
-    int arr[total];
+int *combine_arrays(int *to_be_merged, int merge_total, int *data, int data_total, int *arr, int new_size) {
     // i - for merged
     // j - for main data file
     int counter = 0, i = 0, j = 0; // Loop counter
-    int merge_total = sizeof(to_be_merged)/sizeof(to_be_merged[0]);
-    int data_total = sizeof(data)/sizeof(data[0]);
 
-    // i > j
-    if (merge_total > data_total) {
-        while (i < merge_total) {
-            printf("T\n");
-            if ((to_be_merged[i] < data[j]) && j < data_total){
-                arr[counter] = to_be_merged[i];
-                i++;
-            }
-            else if ((to_be_merged[i] >= data[j]) && j < data_total) {
-                arr[counter] = data[j];
-                j++;
-            }
-            else {
-                arr[counter] = to_be_merged[i];
-                i++;
-            }
+    while (i < merge_total && j < data_total) {
+        printf("T\n");
+        if (to_be_merged[i] < data[j]) {
+            arr[counter] = to_be_merged[i];
+            i++;
+        }
+        else if (to_be_merged[i] > data[j]) {
+            arr[counter] = data[j];
+            j++;
+        }
+        else {
+            arr[counter] = to_be_merged[i];
+            i++;
+        }
+        counter++;
+    }
+
+    if (i == merge_total) {
+        printf("j\n");
+        for (int k = j; k < data_total; k++){
+            arr[counter] = data[k];
             counter++;
         }
     }
-    // i < j
-    else if (merge_total < data_total) {
-        while (j < data_total) {
-            printf("E\n");
-            if ((to_be_merged[i] < data[j]) && i < merge_total) {
-                arr[counter] = to_be_merged[i];
-                i++;
-            }
-            else if ((to_be_merged[i] > data[j]) && i < merge_total) {
-                arr[counter] = data[j];
-                j++;
-            }
-            else {
-                arr[counter] = to_be_merged[j];
-                j++;
-            }
-            counter++;
-        }
-    }
-    // i == j
+
     else {
-        while (data_total == merge_total && counter <= data_total+merge_total) {
-            if (to_be_merged[i] < data[j]) {
-                arr[counter] = to_be_merged[i];
-                i++;
-            }
-            else {
-                arr[counter] = data[j];
-                j++;
-            }
+        printf("J\n");
+        for (int k = i; k < merge_total; k++) {
+            arr[counter] = to_be_merged[k];
             counter++;
         }
     }
@@ -66,12 +42,16 @@ int *combine_arrays(int *to_be_merged, int *data, int total) {
 }
 
 int main() {
-    int arr1[] = {1,5,9,13,15};
+    int arr1[] = {1,5,9,19};
     int arr2[] = {0,2,3,9,13};
 
-    int *new_arr = combine_arrays(arr2, arr1, 10);
+    int arr1_size = sizeof(arr1)/sizeof(arr1[0]);
+    int arr2_size = sizeof(arr2)/sizeof(arr2[0]);
+
+    int arr[arr1_size+arr2_size];
+    int *new_arr = combine_arrays(arr2, arr2_size, arr1, arr1_size, arr, arr1_size+arr2_size);
     
-    for (int i = 0; i < 10; i++) { 
-        printf("%d\n", new_arr[i]);
+    for (int i = 0; i < arr1_size+arr2_size; i++) {
+        printf("%d: %d\n", i, new_arr[i]);
     }
 }

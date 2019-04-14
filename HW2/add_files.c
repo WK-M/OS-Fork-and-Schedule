@@ -8,9 +8,9 @@
 #define LOCK_UN   8    /* unlock */
 #define MAX_SIZE 120
 
-int read_numbers(int *number_list, FILE *to_be_read_file);
+int count_lines(FILE *to_be_read_file);
 void sort_values(int number_list[], int total);
-void *combine_arrays(int *to_be_merged, int *data, int total);
+int *combine_arrays(int *to_be_merged, int merge_total, int *data, int data_total, int *arr, int new_size);
 
 // Implementation of Insertion Sort
 void sort_values(int *number_list, int total) {
@@ -27,130 +27,138 @@ void sort_values(int *number_list, int total) {
     }
 }
 
-// @param:
-// number_list: array for values to be read from the text file
-// to_be_read_file: newx.dat
-int read_numbers(int *number_list, FILE *to_be_read_file) {
-    int counter = 0;
-    while (fscanf(to_be_read_file, "%ld", &number_list[counter]) != EOF) {
-        counter++;
+/* @param:
+ * to_be_read_file - file name to be read
+ * 
+ * return:
+ * number of lines in file
+*/
+int count_lines(FILE *to_be_read_file) {
+    int ch;
+    int lines = 0;
+
+    while ((ch = getc(to_be_read_file)) != EOF) {
+        if (ch == '\n') lines++;
     }
-    return counter;
+
+    return lines;
 }
 
 /* @param: 
- * buffer: array with values read from a previous text file
- * counter: current index
+ * to_be_merged - newx.dat
+ * data - datafile.dat
+ * merge_total - amount of numbers in newx.dat
+ * data_total - amount of numbers datafile.dat
+ * arr - sorted array with numbers from newx.dat and datafile.dat
+ * new_size - total amount
  *
  * return:
- * updated counter loop
- */
-void *combine_arrays(int *to_be_merged, int *data, int total) {
-    int arr[total];
-    // i - for merged
-    // j - for main data file
-    int counter = 0, i = 0, j = 0; // Loop counter
-    int merge_total = sizeof(to_be_merged)/sizeof(to_be_merged[0]);
-    int data_total = sizeof(data)/sizeof(data[0]);
+ * array with sorted values
+*/
+int *combine_arrays(int *to_be_merged, int merge_total, int *data, int data_total, int *arr, int new_size) {
+    /* Loop counter
+     * i - for merged
+     * j - for main data file
+     * counter - current index
+    */
+    int counter = 0, i = 0, j = 0; 
+    while (i < merge_total && j < data_total) {
+        if (to_be_merged[i] < data[j]) {
+            arr[counter] = to_be_merged[i];
+            i++;
+        }
+        else if (to_be_merged[i] > data[j]) {
+            arr[counter] = data[j];
+            j++;
+        }
+        else {
+            arr[counter] = to_be_merged[i];
+            i++;
+        }
+        counter++;
+    }
 
-    // i > j
-    if (merge_total > data_total) {
-        while (i < merge_total) {
-            if ((to_be_merged[i] < data[j]) && j < data_total){
-                arr[counter] = to_be_merged[i];
-                i++;
-            }
-            else if ((to_be_merged[i] >= data[j]) && j < data_total) {
-                arr[counter] = data[j];
-                j++;
-            }
-            else {
-                arr[counter] = to_be_merged[i];
-                i++;
-            }
+    if (i == merge_total) {
+        for (int k = j; k < data_total; k++){
+            arr[counter] = data[k];
             counter++;
         }
     }
-    // i < j
-    else if (merge_total < data_total) {
-        while (j < data_total) {
-            if ((to_be_merged[i] < data[j]) && i < merge_total) {
-                arr[counter] = to_be_merged[i];
-                i++;
-            }
-            else if ((to_be_merged[i] > data[j]) && i < merge_total) {
-                arr[counter] = data[j];
-                j++;
-            }
-            else {
-                arr[counter] = to_be_merged[j];
-                j++;
-            }
-            counter++;
-        }
-    }
-    // i == j
     else {
-        while (data_total == merge_total) {
-            if (to_be_merged[i] < data[j]) {
-                arr[counter] = to_be_merged[i];
-                i++;
-            }
-            else {
-                arr[counter] = data[j];
-                j++;
-            }
+        for (int k = i; k < merge_total; k++) {
+            arr[counter] = to_be_merged[k];
             counter++;
         }
     }
+    return arr;
 }
 
 int main(int argc, char *argv[]) {
+    // datafile.dat
+    FILE *main_data = fopen(argv[1], "r+");
+    if (main_data == NULL) {
+        printf("Error, %s cannot be opened\n", argv[1]);
+        exit(0);
+    }
 
     // newx.dat
-    FILE *main_file = fopen(argv[2], "wb");
+    FILE *main_file = fopen(argv[2], "r");
     if (main_file == NULL) {
         printf("Error, %s cannot be opened", argv[2]);
         exit(0);
     }
 
-    int read_content0[MAX_SIZE];
-    int read_content1[MAX_SIZE];
 
     // If file is already locked, busy wait
-    while (flock(fileno(main_file), LOCK_EX) == -1) {
+    while (flock(fileno(main_data), LOCK_EX) == -1) {
         sleep(2); // Wait 2 s
     }
     
-    if (flock(fileno(main_file), LOCK_EX) != -1) { // Lock released, try to obtain lock
-        // Add numbers from newx.dat into array
-        // And get the total number of items in newx.dat
-        int count = 0;
-        count = read_numbers(read_content0, main_file);
-        // Sort the array
-        sort_values(read_content0, count);
+    if (flock(fileno(main_data), LOCK_EX) != -1) { // Lock released, try to obtain lock
+        // Read number of lines in newx.dat
+        int size_of_content0 = count_lines(main_file);
+        rewind(main_file);
 
+        // Create array with specific size
+        int read_content0[size_of_content0];
+        // Indexing Variable
+        int counter0 = 0;
+        // Add numbers from newx.dat into array
+        while (fscanf(main_file, "%d", &read_content0[counter0]) != EOF) {
+            counter0++;
+        }
         fclose(main_file);
 
-        // datafile.dat
-        FILE *read_file = fopen(argv[1], "r");
-        if (read_file == NULL) {
-            printf("Error, %s cannot be opened\n", argv[1]);
-            exit(0);
-        }
+        // Sort the array
+        sort_values(read_content0, counter0);
 
+        // Read number of lines datafile.dat
+        int size_of_content1 = count_lines(main_data);
+        rewind(main_data);
+
+        int read_content1[size_of_content1];
+        int counter1 = 0;
         // Add the total count in the datafile.dat to the number of items in the main_file
-        count += read_numbers(read_content1, read_file);
+        while (fscanf(main_data, "%d", &read_content1[counter1]) != EOF) {
+            counter1++;
+        }
+        fclose(main_data);
+
+        int total = counter0 + counter1;
+        printf("%d\n", total);
 
         // After adding all the items into the array, and given a total number of items we have into our array.
         // Merge the two arrays together to get a new array
-        int arr[count] = combine_arrays(read_content0, read_content1, count);
+        int arr[total];
+        int *merge_array = combine_arrays(read_content0, counter0, read_content1, counter1, arr, total);
+        rewind(main_data);
 
         // Now let's write it back to the main file
-        for (int i = 0; i < count; i++) {
-            fwrite(arr, sizeof(int), sizeof(arr), read_file);
-        }
-        fclose(read_file);
+        /*for (int i = 0; i < total; i++) {
+            fwrite(arr, sizeof(int), sizeof(arr), main_data);
+        }*/
+        fwrite(arr, sizeof(int), sizeof(arr), main_data);
+        fclose(main_data);
     }
     return 0;
 }
