@@ -95,7 +95,7 @@ int *combine_arrays(int *to_be_merged, int merge_total, int *data, int data_tota
 
 int main(int argc, char *argv[]) {
     // datafile.dat
-    FILE *main_data = fopen(argv[1], "r+");
+    FILE *main_data = fopen(argv[1], "r");
     if (main_data == NULL) {
         printf("Error, %s cannot be opened\n", argv[1]);
         exit(0);
@@ -136,7 +136,10 @@ int main(int argc, char *argv[]) {
         int size_of_content1 = count_lines(main_data);
         rewind(main_data);
 
+        // Create array with specific size
         int read_content1[size_of_content1];
+
+        // Indexing Variable
         int counter1 = 0;
         // Add the total count in the datafile.dat to the number of items in the main_file
         while (fscanf(main_data, "%d", &read_content1[counter1]) != EOF) {
@@ -144,22 +147,24 @@ int main(int argc, char *argv[]) {
         }
         fclose(main_data);
 
-        int total = counter0 + counter1;
-        printf("%d\n", total);
-
         // After adding all the items into the array, and given a total number of items we have into our array.
         // Merge the two arrays together to get a new array
+        int total = counter0 + counter1;
         int arr[total];
         int *merge_array = combine_arrays(read_content0, counter0, read_content1, counter1, arr, total);
-        rewind(main_data);
 
         // Now let's write it back to the main file
         /*for (int i = 0; i < total; i++) {
             fwrite(arr, sizeof(int), sizeof(arr), main_data);
-        }*/
-        fwrite(arr, sizeof(int), sizeof(arr), main_data);
+        }
+        fwrite(&arr, sizeof(int), sizeof(arr), main_data);*/
+
+        // Open file again and write array to the file
+        main_data = fopen(argv[1], "w");
+        for (int i = 0; i < total; i++) {
+            fprintf(main_data, "%d\n", arr[i]);
+        }
         fclose(main_data);
     }
     return 0;
 }
-
