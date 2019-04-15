@@ -1,12 +1,12 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <sys/file.h>
 #define LOCK_SH   1    /* shared lock */
 #define LOCK_EX   2    /* exclusive lock */
 #define LOCK_NB   4    /* don't block when locking */
 #define LOCK_UN   8    /* unlock */
-#define MAX_SIZE 120
 
 int count_lines(FILE *to_be_read_file);
 void sort_values(int number_list[], int total);
@@ -108,13 +108,13 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-
     // If file is already locked, busy wait
-    while (flock(fileno(main_data), LOCK_EX) == -1) {
+    while (flock(fileno(main_data), LOCK_SH) == -1) {
+        printf("waiting...\n");
         sleep(2); // Wait 2 s
     }
-    
-    if (flock(fileno(main_data), LOCK_EX) != -1) { // Lock released, try to obtain lock
+
+    if (flock(fileno(main_data), LOCK_SH) != -1) { // Lock released, try to obtain lock
         // Read number of lines in newx.dat
         int size_of_content0 = count_lines(main_file);
         rewind(main_file);
