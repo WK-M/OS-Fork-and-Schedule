@@ -1,0 +1,18 @@
+\documentclass[a4paper,11pt]{report}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+
+\title{Assignment 2}
+\author{Kendall Molas}
+
+\begin{document}
+
+\maketitle
+
+\section*{Summary}
+
+In this assignment, I created an init file that would create three workers with the same program (add\_files.c) with the one file that was the same and one file that was different. The file that was the same for all three workers was the datafile.dat file. The files that differed were the newx.dat file where x is replaced by 1, 2, or 3. After the three workers were made, they all tried to open the datafile.dat and create an exclusive lock to it by using flock. The program for the worker would then read the datafile.dat and newx.dat and merge the two lists together in sorted order. Each worker would perform this task and would result in a datafile.dat that would be the same as the ans.dat file. 
+
+\end{document}

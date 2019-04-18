@@ -1,9 +1,9 @@
 #include <unistd.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <sys/file.h>
-#define LOCK_SH   1    /* shared lock */
 #define LOCK_EX   2    /* exclusive lock */
 #define LOCK_NB   4    /* don't block when locking */
 #define LOCK_UN   8    /* unlock */
@@ -94,12 +94,19 @@ int *combine_arrays(int *to_be_merged, int merge_total, int *data, int data_tota
 }
 
 int main(int argc, char *argv[]) {
-    // datafile.dat
-    FILE *main_data = fopen(argv[1], "r");
-    if (main_data == NULL) {
-        printf("Error, %s cannot be opened\n", argv[1]);
-        exit(0);
+
+    // Create pointer for file to continuously check if file is not locked
+    FILE *main_data;
+    while (flock(fileno(main_data = fopen(argv[1], "r+")), LOCK_EX | LOCK_NB) == -1) {
+        int count = 0;
+        if (main_data == NULL) {
+            printf("Error, %s cannot be opened\n", argv[1]);
+            exit(0);
+        }
+        while (count != 4500) count++;
     }
+
+    printf("PID: %d, GRABBED LOCK\n", getpid());
 
     // newx.dat
     FILE *main_file = fopen(argv[2], "r");
@@ -107,64 +114,56 @@ int main(int argc, char *argv[]) {
         printf("Error, %s cannot be opened", argv[2]);
         exit(0);
     }
+    // ------------------- Critical Region ------------------- //
 
-    // If file is already locked, busy wait
-    while (flock(fileno(main_data), LOCK_SH) == -1) {
-        printf("waiting...\n");
-        sleep(2); // Wait 2 s
+    printf("PID: %d, Entering Critical Region...\n", getpid());
+    // Read number of lines in newx.dat and then move the pointer back to the beginning using rewind
+    int size_of_content0 = count_lines(main_file);
+    rewind(main_file);
+
+    // Create array with specific size
+    int read_content0[size_of_content0];
+    // Indexing Variable
+    int counter0 = 0;
+    // Add numbers from newx.dat into array and then close the newx.dat file
+    while (fscanf(main_file, "%d", &read_content0[counter0]) != EOF) {
+        counter0++;
+    }
+    fclose(main_file);
+
+    // Sort the array
+    sort_values(read_content0, counter0);
+
+    // Read number of lines datafile.dat and then move the pointer back to the beginning using rewind
+    int size_of_content1 = count_lines(main_data);
+    rewind(main_data);
+
+    // Create array with specific size
+    int read_content1[size_of_content1];
+
+    // Indexing Variable
+    int counter1 = 0;
+    // Add the total count in the datafile.dat to the number of items in the main_file
+    while (fscanf(main_data, "%d", &read_content1[counter1]) != EOF) {
+        counter1++;
     }
 
-    if (flock(fileno(main_data), LOCK_SH) != -1) { // Lock released, try to obtain lock
-        // Read number of lines in newx.dat
-        int size_of_content0 = count_lines(main_file);
-        rewind(main_file);
+    // After adding all the items into the array, and given a total number of items we have into our array.
+    // Merge the two arrays together to get a new array
+    int total = counter0 + counter1;
+    int arr[total];
+    int *merge_array = combine_arrays(read_content0, counter0, read_content1, counter1, arr, total);
 
-        // Create array with specific size
-        int read_content0[size_of_content0];
-        // Indexing Variable
-        int counter0 = 0;
-        // Add numbers from newx.dat into array
-        while (fscanf(main_file, "%d", &read_content0[counter0]) != EOF) {
-            counter0++;
-        }
-        fclose(main_file);
-
-        // Sort the array
-        sort_values(read_content0, counter0);
-
-        // Read number of lines datafile.dat
-        int size_of_content1 = count_lines(main_data);
-        rewind(main_data);
-
-        // Create array with specific size
-        int read_content1[size_of_content1];
-
-        // Indexing Variable
-        int counter1 = 0;
-        // Add the total count in the datafile.dat to the number of items in the main_file
-        while (fscanf(main_data, "%d", &read_content1[counter1]) != EOF) {
-            counter1++;
-        }
-        fclose(main_data);
-
-        // After adding all the items into the array, and given a total number of items we have into our array.
-        // Merge the two arrays together to get a new array
-        int total = counter0 + counter1;
-        int arr[total];
-        int *merge_array = combine_arrays(read_content0, counter0, read_content1, counter1, arr, total);
-
-        // Now let's write it back to the main file
-        /*for (int i = 0; i < total; i++) {
-            fwrite(arr, sizeof(int), sizeof(arr), main_data);
-        }
-        fwrite(&arr, sizeof(int), sizeof(arr), main_data);*/
-
-        // Open file again and write array to the file
-        main_data = fopen(argv[1], "w");
-        for (int i = 0; i < total; i++) {
-            fprintf(main_data, "%d\n", arr[i]);
-        }
-        fclose(main_data);
+    // Now let's write it back to the main file
+    // Open file again and write array to the file
+    main_data = fopen(argv[1], "r+");
+    for (int i = 0; i < total; i++) {
+        fprintf(main_data, "%d\n", arr[i]);
     }
+    // fclose here not only closes the file descriptor, but it also releases the lock as well
+    fclose(main_data);
+    printf("PID: %d, Exiting Critical Region\n", getpid());
+    //flock(fileno(main_data), LOCK_UN | LOCK_NB);
+    printf("PID: %d, File unlocked\n\n", getpid());
     return 0;
 }
