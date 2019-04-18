@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.10.22)  17 APR 2019 21:38
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.10.22)  18 APR 2019 00:29
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -259,6 +259,16 @@ LaTeX Font Info:    External font `lmex10' loaded for size
  [1
 
 {/usr/share/texmf-dist/fonts/map/pdftex/updmap/pdftex.map}]
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <10.95> on input line 16.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <9> on input line 16.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <5> on input line 16.
+LaTeX Font Info:    Try loading font information for T1+lmtt on input line 16.
+ (/usr/share/texmf-dist/tex/latex/lm/t1lmtt.fd
+File: t1lmtt.fd 2009/10/30 v1.6 Font defs for Latin Modern
+)
 Package atveryend Info: Empty hook `BeforeClearDocument' on input line 18.
 pdfTeX warning (ext4): destination with the same identifier (name{page.1}) has 
 been already used, duplicate ignored
@@ -275,21 +285,23 @@ Package rerunfilecheck Info: File `Summary.out' has not changed.
 Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 18.
  ) 
 Here is how much of TeX's memory you used:
- 4538 strings out of 492649
- 67399 string characters out of 6118254
- 150144 words of memory out of 5000000
- 8408 multiletter control sequences out of 15000+600000
- 30735 words of font info for 31 fonts, out of 8000000 for 9000
+ 4605 strings out of 492649
+ 68313 string characters out of 6118254
+ 151144 words of memory out of 5000000
+ 8459 multiletter control sequences out of 15000+600000
+ 50823 words of font info for 44 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 28i,6n,22p,734b,337s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 28i,8n,22p,1134b,337s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/share/texmf-dist/fonts/enc/dvips/lm/lm-ec.enc}</usr/share/texmf-dist/fo
 nts/type1/public/lm/lmbx12.pfb></usr/share/texmf-dist/fonts/type1/public/lm/lmr
 10.pfb></usr/share/texmf-dist/fonts/type1/public/lm/lmr12.pfb></usr/share/texmf
--dist/fonts/type1/public/lm/lmr17.pfb>
-Output written on Summary.pdf (2 pages, 97277 bytes).
+-dist/fonts/type1/public/lm/lmr17.pfb></usr/share/texmf-dist/fonts/type1/public
+/lm/lmr6.pfb></usr/share/texmf-dist/fonts/type1/public/lm/lmr8.pfb></usr/share/
+texmf-dist/fonts/type1/public/lm/lmtt9.pfb>
+Output written on Summary.pdf (2 pages, 151672 bytes).
 PDF statistics:
- 34 PDF objects out of 1000 (max. 8388607)
- 25 compressed objects within 1 object stream
- 3 named destinations out of 1000 (max. 500000)
+ 49 PDF objects out of 1000 (max. 8388607)
+ 37 compressed objects within 1 object stream
+ 4 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

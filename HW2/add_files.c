@@ -1,3 +1,8 @@
+/* CSc 32200
+ * Professor Gordon
+ * Assignment 2
+ * Kendall Molas
+ */
 #include <unistd.h>
 #include <errno.h>
 #include <stdio.h>
@@ -31,7 +36,7 @@ void sort_values(int *number_list, int total) {
  * to_be_read_file - file name to be read
  * 
  * return:
- * number of lines in file
+ * int value of number of lines in file
 */
 int count_lines(FILE *to_be_read_file) {
     int ch;
@@ -96,6 +101,7 @@ int *combine_arrays(int *to_be_merged, int merge_total, int *data, int data_tota
 int main(int argc, char *argv[]) {
 
     // Create pointer for file to continuously check if file is not locked
+    // If file is locked, let counter count to 4500 and try again.
     FILE *main_data;
     while (flock(fileno(main_data = fopen(argv[1], "r+")), LOCK_EX | LOCK_NB) == -1) {
         int count = 0;
