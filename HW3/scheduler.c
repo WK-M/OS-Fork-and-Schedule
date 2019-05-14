@@ -16,8 +16,15 @@
 #define CHARACTER_LENGTH 80
 #define BUFFER_SIZE 120
 
+/* Remaining issues:
+ * SRTN
+ * Priority
+ * Turnaround time, wait time, etc
+ */
+
 typedef struct queue Queue;
 typedef struct process_control_block PCB;
+typedef struct Statistics info;
 
 // Self-defined boolean
 typedef enum {false, true} bool;
@@ -48,6 +55,12 @@ typedef struct queue {
     unsigned int current_size;
 } Queue;
 
+typedef struct stats {
+    int pid[NUMBER_OF_PCBS];
+    int turnaround_time;
+    int wait_time;
+} Statistics;
+
 
 // Reads from text file
 // Takes in filename and queue
@@ -65,7 +78,7 @@ void interpret_data_from_text_file(char *file, Queue *q) {
         printf("Working\n");
     }
 
-    int counter = 0;
+    int clock = 0;
     bool process_information_retreived = false;
     char file_buffer[BUFFER_SIZE]; 
     char *process_pointer;
@@ -155,11 +168,12 @@ void enqueue(Queue *q, PCB *p) {
     }
 }
 
+// Organize based on FCFS algorithm
+// Sort queue based on arrival time
 void runFCFS(Queue *q) {
     // First specify the type of scheduler algorithm from argv
     q->type_of_scheduler[0] = "FCFS";
     PCB *min_process;
-    // Sort queue based on arrival time
     for (int i = 0; i < q->current_size; i++) {
         min_process = q->queue_size[i];
         for (int j = i; j < q->current_size; j++) {
@@ -173,11 +187,12 @@ void runFCFS(Queue *q) {
     }
 }
 
+// Organize based on SJN algorithm
+// Sort queue based on remaining run time
 void runSJN(Queue *q) {
     // First specify the type of scheduler algorithm from argv
     q->type_of_scheduler[0] = "SJN";
     PCB *min_process;
-    // Sort queue based on remaining run time
     for (int i = 0; i < q->current_size; i++) {
         min_process = q->queue_size[i];
         for (int j = i; j < q->current_size; j++) {
@@ -191,11 +206,12 @@ void runSJN(Queue *q) {
     }
 }
 
+// Organize based on Priority Algorithm
+// Sort queue based on remaining run time
 void runPriority(Queue *q) {
     // First specify the type of scheduler algorithm from argv
     q->type_of_scheduler[0] = "PRIORITY";
     PCB *process_with_low_priority;
-    // Sort queue based on remaining run time
     for (int i = 0; i < q->current_size; i++) {
         process_with_low_priority = q->queue_size[i];
         for (int j = i; j < q->current_size; j++) {
@@ -237,69 +253,75 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int scheduler_type;
-
-    // Read in data from the processes.txt and store into queue
-    interpret_data_from_text_file(file_name, &ready_queue);
-    printf("%d processes added to queue..\n", ready_queue.current_size);
-
+    int scheduler_type, time_quantum;
     if (strcmp(argv[1],"FCFS") == 0) {
         scheduler_type = 0;
         printf("Executing FCFS Scheduling Algorithm\n");
         ready_queue.type_of_scheduler[0] = "FCFS";
         runFCFS(&ready_queue);
     }
-
     else if (strcmp(argv[1],"SJN") == 0) {
         scheduler_type = 1;
         printf("Executing SJN Scheduling Algorithm\n");
         ready_queue.type_of_scheduler[0] = "SJN";
         runSJN(&ready_queue);
     }
-
     else if (strcmp(argv[1], "PRIORITY") == 0) {
         scheduler_type = 2;
         printf("Executing Priority Scheduling Algorithm\n");
         ready_queue.type_of_scheduler[0] = "Priority";
         runPriority(&ready_queue);
     }
-
     else if (strcmp(argv[1], "RR") == 0) {
+        time_quantum = atoi(argv[3]);
         if (strcmp(argv[2], "FCFS") == 0) {
-
+            scheduler_type = 3;
+            printf("---- Running RR FCFS ON CPU ----\n");
         }
-
         else if (strcmp(argv[2], "SRTN") == 0) {
-
+            scheduler_type = 4;
+            printf("---- Running RR SRTN ON CPU ----\n");
         }
-        
         else if (strcmp(argv[2], "PRIORITY") == 0) {
-
+            scheduler_type = 5;
+            printf("---- Running RR PRIORITY ON CPU ----\n");
+        }
+        else {
+            printf("Error! Type of RR not specified, EXITING!"); 
+            return 1;
         }
     }
 
-    else {
-        printf("NOT A VALID SCHEDULING ALGORITHM\n");
-        return 1;
-    }
-    
+    // Read in data from the processes.txt and store into queue
+    interpret_data_from_text_file(file_name, &ready_queue);
+    printf("%d processes added to queue..\n", ready_queue.current_size);
     current_queue(&ready_queue);
 
+    // Create named pipe in temp folder on host computer
     char *link = "/tmp/kendall_project_link";
     int fd;
 
     // Establish link
     mkfifo(link, 0666);
 
+    // If the scheduler_type >= 3, then send time quantum to cpu_emulator as well
+    // Otherwise, do not do anything
+    if (scheduler_type >= 3) {
+        fd = open(link, O_WRONLY);
+        write(fd, &time_quantum, sizeof(int));
+        close(fd);
+        usleep(500);
+    }
+
     // Make buffer same size as block, 7 items that hold lengths of up to 100.
     char buffer[8][100]; 
-    int counter = 1;
+    int clock = 0;
     int number_of_context_switches = 0;
 
     while (ready_queue.current_size != 0) {
         printf("-------------\n");
         printf("IN SCHEDULER PROCESS\n");
-        printf("Ran %d time(s):\n", counter);
+        printf("Ran %d time(s):\n", clock);
 
         // Create a pointer to the dequeued PCB
         PCB *p = dequeue(&ready_queue);
@@ -315,18 +337,25 @@ int main(int argc, char *argv[]) {
         // Receive updated PCB from the CPU Emulator
         fd = open(link, O_RDONLY);
         read(fd, buffer, sizeof(buffer));
+        close(fd);
+        usleep(500);
 
         // Read file from buffer and store it into the BLOCK array
         memcpy(p->BLOCK, buffer, sizeof(p->BLOCK));
         p->est_remaining_run_time = strtol(p->BLOCK[7], NULL, 0);
 
         // If the remaining running time is not zero, we add it back into the queue
-        if (type_of_scheduler >= 3) {
+        //
+        if (scheduler_type >= 3) {
             if (p->est_remaining_run_time > 0) {
                 enqueue(&ready_queue, p);
+                number_of_context_switches++;
             }
             else {
-
+                printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
+                p = NULL;
+                ready_queue.current_size--;
+                number_of_context_switches++;
             }
         }
         // Otherwise, remove it from the queue and decrement the queue size
@@ -336,14 +365,13 @@ int main(int argc, char *argv[]) {
             ready_queue.current_size--;
             number_of_context_switches++;
         }
-
         close(fd);
         printf("-------------\n");
         current_queue(&ready_queue);
-        sleep(1);
+        usleep(500);
 
         fd = open(link, O_RDONLY);
-        read(fd, &counter, sizeof(int));
+        read(fd, &clock, sizeof(int));
         close(fd);
     }
     // Send a NULL message to the CPU Emulator to dictate that queue is empty
@@ -354,6 +382,6 @@ int main(int argc, char *argv[]) {
     printf("SCHEDULER ENDING...\n");
 
     printf("Number of context switches: %d\n", number_of_context_switches);
+    printf("Clock time: %d\n", clock);
     return 0;
 }
-
