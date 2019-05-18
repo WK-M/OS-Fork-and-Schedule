@@ -163,7 +163,7 @@ void current_queue(Queue *q) {
 // Add PCB into ready queue
 void enqueue(Queue *q, PCB *p) {
     if (p->est_remaining_run_time > 0) {
-        printf("Process [%s] has returned to queue\n", p->process_name);
+        //printf("Process [%s] has returned to queue\n", p->process_name);
         q->queue_size[q->rear] = p;
     }
 }
@@ -172,7 +172,6 @@ void enqueue(Queue *q, PCB *p) {
 // Sort queue based on arrival time
 void runFCFS(Queue *q) {
     // First specify the type of scheduler algorithm from argv
-    q->type_of_scheduler[0] = "FCFS";
     PCB *min_process;
     for (int i = 0; i < q->current_size; i++) {
         min_process = q->queue_size[i];
@@ -191,7 +190,6 @@ void runFCFS(Queue *q) {
 // Sort queue based on remaining run time
 void runSJN(Queue *q) {
     // First specify the type of scheduler algorithm from argv
-    q->type_of_scheduler[0] = "SJN";
     PCB *min_process;
     for (int i = 0; i < q->current_size; i++) {
         min_process = q->queue_size[i];
@@ -210,7 +208,6 @@ void runSJN(Queue *q) {
 // Sort queue based on remaining run time
 void runPriority(Queue *q) {
     // First specify the type of scheduler algorithm from argv
-    q->type_of_scheduler[0] = "PRIORITY";
     PCB *process_with_low_priority;
     for (int i = 0; i < q->current_size; i++) {
         process_with_low_priority = q->queue_size[i];
@@ -239,13 +236,14 @@ PCB *dequeue(Queue *q) {
         q->queue_size[q->rear] = NULL;
 
     }
-    printf("\nProcess [%s]: dequeued\n", dequeued_process->process_name);
+    //printf("\nProcess [%s]: dequeued\n", dequeued_process->process_name);
 
     return dequeued_process;
 }
 
 int main(int argc, char *argv[]) {
     char *file_name = {"process_3.txt"};
+    Queue list_of_processes = {NULL};
     Queue ready_queue = {NULL};
 
     if (argc < 2) {
@@ -258,21 +256,21 @@ int main(int argc, char *argv[]) {
         scheduler_type = 0;
         printf("Executing FCFS Scheduling Algorithm\n");
         ready_queue.type_of_scheduler[0] = "FCFS";
-        runFCFS(&ready_queue);
+        //runFCFS(&ready_queue);
     }
     else if (strcmp(argv[1],"SJN") == 0) {
         scheduler_type = 1;
         printf("Executing SJN Scheduling Algorithm\n");
         ready_queue.type_of_scheduler[0] = "SJN";
-        runSJN(&ready_queue);
+        //runSJN(&ready_queue);
     }
     else if (strcmp(argv[1], "PRIORITY") == 0) {
         scheduler_type = 2;
         printf("Executing Priority Scheduling Algorithm\n");
         ready_queue.type_of_scheduler[0] = "Priority";
-        runPriority(&ready_queue);
+        //runPriority(&ready_queue);
     }
-    else if (strcmp(argv[1], "RR") == 0) {
+    else if (strcmp(argv[1], "RR") == 0 && argc == 3) {
         time_quantum = atoi(argv[3]);
         if (strcmp(argv[2], "FCFS") == 0) {
             scheduler_type = 3;
@@ -293,9 +291,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Read in data from the processes.txt and store into queue
-    interpret_data_from_text_file(file_name, &ready_queue);
-    printf("%d processes added to queue..\n", ready_queue.current_size);
-    current_queue(&ready_queue);
+    interpret_data_from_text_file(file_name, &list_of_processes);
+    printf("%d processes added to queue..\n", list_of_processes.current_size);
+    current_queue(&list_of_processes);
 
     // Create named pipe in temp folder on host computer
     char *link = "/tmp/kendall_project_link";
@@ -313,67 +311,139 @@ int main(int argc, char *argv[]) {
         usleep(500);
     }
 
-    // Make buffer same size as block, 7 items that hold lengths of up to 100.
+    // Make buffer same size as block, 14 items that hold lengths of up to 100.
     char buffer[8][100]; 
     int clock = 0;
     int number_of_context_switches = 0;
+    int index = 0;
+    int process_exists;
+    while (process_exists != -1) {
+        // Get current clock time
+        fd = open(link, O_RDONLY);
+        read(fd, &clock, sizeof(int));
+        close(fd);
+        sleep(1);
 
-    while (ready_queue.current_size != 0) {
+        // Create a pointer to the dequeued PCB
+        PCB *p = NULL;
         printf("-------------\n");
         printf("IN SCHEDULER PROCESS\n");
         printf("Ran %d time(s):\n", clock);
 
-        // Create a pointer to the dequeued PCB
-        PCB *p = dequeue(&ready_queue);
-        // Copy from process block to buffer to send to named pipe
-        memcpy(buffer, p->BLOCK, sizeof(p->BLOCK));
-        current_queue(&ready_queue);
-
-        // Open named pipe to send PCB that was dequeued to the CPU Emulator
-        fd = open(link, O_WRONLY);
-        write(fd, buffer, sizeof(buffer));
-        close(fd);
-
-        // Receive updated PCB from the CPU Emulator
-        fd = open(link, O_RDONLY);
-        read(fd, buffer, sizeof(buffer));
-        close(fd);
-        usleep(500);
-
-        // Read file from buffer and store it into the BLOCK array
-        memcpy(p->BLOCK, buffer, sizeof(p->BLOCK));
-        p->est_remaining_run_time = strtol(p->BLOCK[7], NULL, 0);
-
-        // If the remaining running time is not zero, we add it back into the queue
-        //
+        // Check in front of list_of_processes queue, if the item in front of the queue 
         if (scheduler_type >= 3) {
-            if (p->est_remaining_run_time > 0) {
+
+        }
+
+        // For scheduling algorithms that are non-preemptive
+        else {
+            while (list_of_processes.current_size != 0 && list_of_processes.queue_size[index]->arrival <= clock) {
+                // Dequeue the process in front of the queue from list_of_processes
+                p = dequeue(&list_of_processes);
+                list_of_processes.current_size--;
+                printf("Process %s has been dequeued from list\n", p->process_name);
+                ready_queue.current_size++;
+                ready_queue.rear = ready_queue.current_size - 1;
                 enqueue(&ready_queue, p);
-                number_of_context_switches++;
+                printf("----------------------------\n");
+                printf("Process %s has been enqueued into ready queue\n", p->process_name);
+                current_queue(&ready_queue);
             }
+
+            // SJN
+            if (scheduler_type == 1) {
+                runSJN(&ready_queue);
+            }
+
+            // Priority
+            else if (scheduler_type == 2) {
+                runPriority(&ready_queue);
+            }
+
+        }
+
+        // Check if there is anything present in the ready_queue
+        // If there is nothing present in the ready_queue, increment clock
+        if (ready_queue.current_size != 0) {
+            
+            // Indicate to cpu that there is a process that exists.
+            process_exists = 1;
+            fd = open(link, O_WRONLY);
+            write(fd, &process_exists, sizeof(int));
+            close(fd);
+            usleep(500);
+
+            // Dequeue the process in front of the queue from ready_queue 
+            p = dequeue(&ready_queue);
+
+            // Copy from process block to buffer to send to named pipe
+            memcpy(buffer, p->BLOCK, sizeof(p->BLOCK));
+            current_queue(&ready_queue);
+
+            // Open named pipe to send PCB that was dequeued to the CPU Emulator
+            fd = open(link, O_WRONLY);
+            write(fd, buffer, sizeof(buffer));
+            close(fd);
+
+            // Implement here pre-emptive / non-preemptive
+
+            // Receive updated PCB from the CPU Emulator
+            fd = open(link, O_RDONLY);
+            read(fd, buffer, sizeof(buffer));
+            close(fd);
+            usleep(500);
+
+            // Read file from buffer and store it into the BLOCK array
+            memcpy(p->BLOCK, buffer, sizeof(p->BLOCK));
+            p->est_remaining_run_time = strtol(p->BLOCK[7], NULL, 0);
+
+            // If the remaining running time is not zero, we add it back into the queue
+            if (scheduler_type >= 3) {
+                if (p->est_remaining_run_time > 0) {
+                    enqueue(&ready_queue, p);
+                    number_of_context_switches++;
+                }
+                else {
+                    printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
+                    p = NULL;
+                    ready_queue.current_size--;
+                    number_of_context_switches++;
+                }
+            }
+
+            // Otherwise, remove it from the queue and decrement the queue size
             else {
                 printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
                 p = NULL;
                 ready_queue.current_size--;
                 number_of_context_switches++;
+                if (list_of_processes.current_size == 0 && ready_queue.current_size == 0) {
+                    process_exists = -1;
+                }
             }
-        }
-        // Otherwise, remove it from the queue and decrement the queue size
-        else {
-            printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
-            p = NULL;
-            ready_queue.current_size--;
-            number_of_context_switches++;
-        }
-        close(fd);
-        printf("-------------\n");
-        current_queue(&ready_queue);
-        usleep(500);
+            //close(fd);
 
-        fd = open(link, O_RDONLY);
-        read(fd, &clock, sizeof(int));
-        close(fd);
+        }
+        // If no processes in ready queue, send a integer to indicate that there are no processes in ready_queue
+        // Value indicated by -1
+        else {
+            printf("No process exists at time: %d\n", clock);
+            process_exists = 0;
+            fd = open(link, O_WRONLY);
+            write(fd, &process_exists, sizeof(int));
+            close(fd);
+            usleep(500);
+        }
+        printf("-------------\n");
+        //current_queue(&ready_queue);
+        usleep(1000);
     }
+    // Once there is no more items items in list_of_processes, no more items to read
+    process_exists = -1;
+    fd = open(link, O_WRONLY);
+    read(fd, &process_exists, sizeof(int));
+    close(fd);
+
     // Send a NULL message to the CPU Emulator to dictate that queue is empty
     memset(buffer, 0, sizeof(buffer));
     fd = open(link, O_WRONLY);
