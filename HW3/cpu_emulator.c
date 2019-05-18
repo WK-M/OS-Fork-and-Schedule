@@ -110,17 +110,6 @@ int main(int argc, char *argv[]) {
             read(fd1, RECEIVED_PCB_INFO, sizeof(RECEIVED_PCB_INFO));
             close(fd1);
 
-            // -------------------- DEPRECATED -------------------- 
-
-            /* This is not necessary anymore as we have a integer to indicate if a process exists in the queue
-             If null PCB received, close pipe and exit
-             Have to implement how to check ready queue
-            if (strlen(RECEIVED_PCB_INFO[1]) == 0) {
-                close(fd1);
-                printf("CPU EMULATOR ENDING...\n");
-                return 0;
-            }*/
-
             printf("-------------\n");
             printf("IN CPU EMULATOR:\n");
             printf("\nRan %d time(s):\n", clock++);
@@ -152,6 +141,7 @@ int main(int argc, char *argv[]) {
             write(fd1, &clock, sizeof(clock));
             printf("CLOCK TIME %d sent to SCHEDULER\n", clock);
             close(fd1);
+            usleep(500);
         }
     }
 }

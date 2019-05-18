@@ -341,13 +341,9 @@ int main(int argc, char *argv[]) {
                 // Dequeue the process in front of the queue from list_of_processes
                 p = dequeue(&list_of_processes);
                 list_of_processes.current_size--;
-                printf("Process %s has been dequeued from list\n", p->process_name);
                 ready_queue.current_size++;
                 ready_queue.rear = ready_queue.current_size - 1;
                 enqueue(&ready_queue, p);
-                printf("----------------------------\n");
-                printf("Process %s has been enqueued into ready queue\n", p->process_name);
-                current_queue(&ready_queue);
             }
 
             // SJN
@@ -365,7 +361,6 @@ int main(int argc, char *argv[]) {
         // Check if there is anything present in the ready_queue
         // If there is nothing present in the ready_queue, increment clock
         if (ready_queue.current_size != 0) {
-            
             // Indicate to cpu that there is a process that exists.
             process_exists = 1;
             fd = open(link, O_WRONLY);
@@ -410,48 +405,41 @@ int main(int argc, char *argv[]) {
                     number_of_context_switches++;
                 }
             }
-
             // Otherwise, remove it from the queue and decrement the queue size
             else {
                 printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
                 p = NULL;
                 ready_queue.current_size--;
                 number_of_context_switches++;
-                if (list_of_processes.current_size == 0 && ready_queue.current_size == 0) {
-                    process_exists = -1;
-                }
             }
-            //close(fd);
-
         }
         // If no processes in ready queue, send a integer to indicate that there are no processes in ready_queue
         // Value indicated by -1
         else {
             printf("No process exists at time: %d\n", clock);
-            process_exists = 0;
+            process_exists = (list_of_processes.current_size == 0) ? -1 : 0;
             fd = open(link, O_WRONLY);
             write(fd, &process_exists, sizeof(int));
             close(fd);
             usleep(500);
         }
         printf("-------------\n");
-        //current_queue(&ready_queue);
         usleep(1000);
     }
     // Once there is no more items items in list_of_processes, no more items to read
-    process_exists = -1;
-    fd = open(link, O_WRONLY);
-    read(fd, &process_exists, sizeof(int));
-    close(fd);
+    /*process_exists = -1;
+      fd = open(link, O_WRONLY);
+      read(fd, &process_exists, sizeof(int));
+      close(fd);
 
     // Send a NULL message to the CPU Emulator to dictate that queue is empty
     memset(buffer, 0, sizeof(buffer));
     fd = open(link, O_WRONLY);
     write(fd, buffer, sizeof(buffer));
     close(fd);
-    printf("SCHEDULER ENDING...\n");
+    printf("SCHEDULER ENDING...\n");*/
 
     printf("Number of context switches: %d\n", number_of_context_switches);
-    printf("Clock time: %d\n", clock);
+    printf("Clock time: %ds\n", clock);
     return 0;
 }
