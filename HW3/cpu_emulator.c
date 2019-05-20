@@ -13,15 +13,6 @@
 #include <sys/types.h> 
 #include <unistd.h> 
 
-int RR(int time_quantum, int est_remaining_run_time) {
-    while (time_quantum-- != 0) {
-        est_remaining_run_time--;
-        if (est_remaining_run_time == 0)
-            return 0;
-    }
-    return est_remaining_run_time;
-}
-
 int main(int argc, char *argv[]) {
     int scheduler_type;
     if (strcmp(argv[1],"FCFS") == 0) {
@@ -60,40 +51,42 @@ int main(int argc, char *argv[]) {
     }
 
     // time_quantum: value used to run a process on CPU and send it back to the scheduler
-    // fd1: file descriptor for named pipe
-    int time_quantum, process_exists, fd1;
+    // fd: file descriptor for named pipe
+    int preempt, time_quantum, process_exists, fd;
     char *link = "/tmp/kendall_project_link";
 
     // Establish link
     mkfifo(link, 0666);
 
-    int clock = 0;
-    fd1 = open(link, O_WRONLY);
-    write(fd1, &clock, sizeof(int));
-    close(fd1);
-    usleep(500);
+    if (scheduler_type >= 3) {
+        fd = open(link, O_RDONLY);
+        read(fd, &time_quantum, sizeof(int));
+        close(fd);
+        //usleep(200);
+        printf("---- Time Quantum Retreived! TQ = %d ----\n", time_quantum);
+    }
 
-    /*fd1 = open(link, O_RDONLY);
-    read(fd1, &time_quantum, sizeof(int));
-    close(fd1);
-    usleep(500);
-    printf("---- Time Quantum Retreived! TQ = %d ----\n", time_quantum);*/
+    int local = 1, clock = 0;
+    fd = open(link, O_WRONLY);
+    write(fd, &clock, sizeof(int));
+    close(fd);
+    usleep(200);
 
     char RECEIVED_PCB_INFO[8][100];
     while (1) {
-        fd1 = open(link, O_RDONLY);
-        read(fd1, &process_exists, sizeof(int));
-        close(fd1);
+        fd = open(link, O_RDONLY);
+        read(fd, &process_exists, sizeof(int));
+        close(fd);
         usleep(500);
 
         // If ready queue has no processes in it
         if (process_exists == 0) {
             // Update clock
             clock++;
-            fd1 = open(link, O_WRONLY);
-            write(fd1, &clock, sizeof(int));
-            close(fd1);
-            usleep(500);
+            fd = open(link, O_WRONLY);
+            write(fd, &clock, sizeof(int));
+            close(fd);
+            usleep(200);
         }
 
         // list_of_processes queue is completely empty
@@ -106,9 +99,9 @@ int main(int argc, char *argv[]) {
         else {
             printf("PCB RECEIVED\n");
             // Open up the named pipe and read from it
-            fd1 = open(link, O_RDONLY);
-            read(fd1, RECEIVED_PCB_INFO, sizeof(RECEIVED_PCB_INFO));
-            close(fd1);
+            fd = open(link, O_RDONLY);
+            read(fd, RECEIVED_PCB_INFO, sizeof(RECEIVED_PCB_INFO));
+            close(fd);
 
             printf("-------------\n");
             printf("IN CPU EMULATOR:\n");
@@ -116,32 +109,69 @@ int main(int argc, char *argv[]) {
 
             int retreived_time = strtol(RECEIVED_PCB_INFO[7], NULL, 10);
             printf("Process: [%s], Current Run time is: [%d]\n", RECEIVED_PCB_INFO[1], retreived_time);
+            usleep(200);
 
             // Update time after running on CPU
             if (scheduler_type >= 3) {
-                int updated_run_time = RR(time_quantum, retreived_time);
-                sprintf(RECEIVED_PCB_INFO[7], "%d", updated_run_time);
+                // PCB received and running on CPU, check if there is a process who just arrived
+                // As long as process has not been preempted and that the local clock has not ran for the time_quantum
+                // Continue checking if a process has arrived
+                while (1) {
+                    // Check if preempted
+                    fd = open(link, O_RDONLY);
+                    read(fd, &preempt, sizeof(int));
+                    close(fd);
+                    usleep(200);
+
+                    if (preempt == 1) break;
+
+                    // Increment clock 
+                    fd = open(link, O_WRONLY);
+                    write(fd, &clock, sizeof(int));
+                    close(fd);
+                    usleep(200 + clock % (clock + time_quantum*time_quantum));
+                    usleep(200);
+                    clock++;
+
+                    // Send local clock to the scheduler
+                    local++; // Update local clock
+                    fd = open(link, O_WRONLY);
+                    write(fd, &local, sizeof(int));
+                    close(fd);
+                    usleep(200);
+                    if (local == time_quantum || local == retreived_time){
+                        break;
+                    }
+                } 
+
+                // If process has been preempted or the local time_quantum has been acheived, then updated PCB info
+                if (preempt == 1 || local == time_quantum || local == retreived_time) {
+                    int updated_run_time = (retreived_time - local < 0) ? 0 : retreived_time - local;
+                    sprintf(RECEIVED_PCB_INFO[7], "%d", updated_run_time);
+                    local = 0;
+                    printf("Updated PCB\n");
+                }
             }
             else {
                 while (--retreived_time != 0) clock++;
                 sprintf(RECEIVED_PCB_INFO[7], "%d", retreived_time);
             }
-
             // Send the PCB back to the scheduler to handle
-            fd1 = open(link, O_WRONLY);
-            write(fd1, RECEIVED_PCB_INFO, sizeof(RECEIVED_PCB_INFO));
+            printf("Sending PCB\n");
+            fd = open(link, O_WRONLY);
+            write(fd, RECEIVED_PCB_INFO, sizeof(RECEIVED_PCB_INFO));
             printf("Process: [%s], New Run time is: [%s]\n", RECEIVED_PCB_INFO[1],RECEIVED_PCB_INFO[7]);
             printf("-------------\n");
-            close(fd1);
-            usleep(500); // Sleep to allow scheduler to receive data
+            close(fd);
+            usleep(200); // Sleep to allow scheduler to receive data
 
             // Account for context switch
-            clock+=2;
-            fd1 = open(link, O_WRONLY);
-            write(fd1, &clock, sizeof(clock));
+            clock += 2;
+            fd = open(link, O_WRONLY);
+            write(fd, &clock, sizeof(clock));
             printf("CLOCK TIME %d sent to SCHEDULER\n", clock);
-            close(fd1);
-            usleep(500);
+            close(fd);
+            usleep(200);
         }
     }
 }
