@@ -62,11 +62,10 @@ int main(int argc, char *argv[]) {
         fd = open(link, O_RDONLY);
         read(fd, &time_quantum, sizeof(int));
         close(fd);
-        //usleep(200);
         printf("---- Time Quantum Retreived! TQ = %d ----\n", time_quantum);
     }
 
-    int local = 1, clock = 0;
+    int local = 0, clock = 0;
     fd = open(link, O_WRONLY);
     write(fd, &clock, sizeof(int));
     close(fd);
@@ -105,7 +104,7 @@ int main(int argc, char *argv[]) {
 
             printf("-------------\n");
             printf("IN CPU EMULATOR:\n");
-            printf("\nRan %d time(s):\n", clock++);
+            printf("\nRan %d time(s):\n", clock);
 
             int retreived_time = strtol(RECEIVED_PCB_INFO[7], NULL, 10);
             printf("Process: [%s], Current Run time is: [%d]\n", RECEIVED_PCB_INFO[1], retreived_time);
@@ -125,27 +124,24 @@ int main(int argc, char *argv[]) {
 
                     if (preempt == 1) break;
 
-                    // Increment clock 
-                    fd = open(link, O_WRONLY);
-                    write(fd, &clock, sizeof(int));
-                    close(fd);
-                    usleep(200 + clock % (clock + time_quantum*time_quantum));
-                    usleep(200);
-                    clock++;
-
                     // Send local clock to the scheduler
                     local++; // Update local clock
                     fd = open(link, O_WRONLY);
                     write(fd, &local, sizeof(int));
                     close(fd);
-                    usleep(200);
-                    if (local == time_quantum || local == retreived_time){
-                        break;
-                    }
-                } 
+                    usleep(1000);
+                    if (local == time_quantum || local == retreived_time) break;
 
+                    // Increment clock 
+                    clock++;
+                    fd = open(link, O_WRONLY);
+                    write(fd, &clock, sizeof(int));
+                    close(fd);
+                    usleep(200);
+                } 
                 // If process has been preempted or the local time_quantum has been acheived, then updated PCB info
                 if (preempt == 1 || local == time_quantum || local == retreived_time) {
+                    printf("Current Clock: %d\n", clock);
                     int updated_run_time = (retreived_time - local < 0) ? 0 : retreived_time - local;
                     sprintf(RECEIVED_PCB_INFO[7], "%d", updated_run_time);
                     local = 0;
@@ -153,8 +149,9 @@ int main(int argc, char *argv[]) {
                 }
             }
             else {
-                while (--retreived_time != 0) clock++;
+                while (--retreived_time > 0) clock++;
                 sprintf(RECEIVED_PCB_INFO[7], "%d", retreived_time);
+                printf("Current Clock: %d\n", clock);
             }
             // Send the PCB back to the scheduler to handle
             printf("Sending PCB\n");
