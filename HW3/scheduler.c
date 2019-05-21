@@ -37,6 +37,10 @@ typedef struct process_control_block {
     int est_total_run_time;
     int est_remaining_run_time;
 
+    int turnaround_time;
+    int completed_time;
+    int wait_time;
+
     // Used for passing into named pipe
     char BLOCK[8][100];
 } PCB;
@@ -47,13 +51,6 @@ typedef struct queue {
     int rear;
     unsigned int current_size;
 } Queue;
-
-typedef struct stats {
-    int pid[NUMBER_OF_PCBS];
-    int turnaround_time;
-    int wait_time;
-} Statistics;
-
 
 // Reads from text file
 // Takes in filename and queue
@@ -69,7 +66,7 @@ void interpret_data_from_text_file(char *file, Queue *q) {
         printf("Working\n");
     }
 
-    int clock = 0;
+    int clock = 0, index = 0;
     bool process_information_retreived = false;
     char file_buffer[BUFFER_SIZE]; 
     char *process_pointer;
@@ -153,10 +150,8 @@ void current_queue(Queue *q) {
 
 // Add PCB into ready queue
 void enqueue(Queue *q, PCB *p) {
-    if (p->est_remaining_run_time > 0) {
-        //printf("Process [%s] has returned to queue\n", p->process_name);
-        q->queue_size[q->rear] = p;
-    }
+    q->rear = q->current_size - 1;
+    q->queue_size[q->rear] = p;
 }
 
 // Organize based on SJN algorithm
@@ -218,6 +213,7 @@ int main(int argc, char *argv[]) {
     char *file_name = {"process_3.txt"};
     Queue list_of_processes = {NULL};
     Queue ready_queue = {NULL};
+    Queue completed_jobs = {NULL}; 
 
     if (argc < 2) {
         printf("Not enough arguments!\n");
@@ -298,7 +294,6 @@ int main(int argc, char *argv[]) {
         printf("Ran %d time(s):\n", clock);
 
         // For scheduling algorithms that are non-preemptive
-        current_queue(&ready_queue);
         while (list_of_processes.current_size != 0 && list_of_processes.queue_size[0]->arrival <= clock) {
             // Dequeue the process in front of the queue from list_of_processes
             p = dequeue(&list_of_processes);
@@ -328,36 +323,35 @@ int main(int argc, char *argv[]) {
             close(fd);
             usleep(200);
 
-            // Dequeue the process in front of the queue from ready_queue 
+            // Dequeue the process in frint wait_timeont of the queue from ready_queue 
             p = dequeue(&ready_queue);
+            current_queue(&ready_queue);
 
             // Copy from process block to buffer to send to named pipe
             memcpy(buffer, p->BLOCK, sizeof(p->BLOCK));
 
             // Open named pipe to send PCB that was dequeued to the CPU Emulator
+            printf("Sent Process to PCB!\n");
             fd = open(link, O_WRONLY);
             write(fd, buffer, sizeof(buffer));
             close(fd);
-            usleep(200);
+            usleep(500);
 
             // If preemptive algorithm called
             if (scheduler_type >= 3) {
                 int local, index = 0;
                 while (1) {
-                    if (list_of_processes.current_size != 0) {
-                        /*if ((scheduler_type == 4 && (clock == list_of_processes.queue_size[0]->arrival 
-                          && p->est_remaining_run_time - local >= list_of_processes.queue_size[0]->est_remaining_run_time))
-                          || (scheduler_type != 4 || scheduler_type != 1 && clock == list_of_processes.queue_size[0]->arrival)) {*/
-                        if (scheduler_type == 4 && clock == list_of_processes.queue_size[index]->arrival) {
+                    if (list_of_processes.current_size != 0 && clock == list_of_processes.queue_size[index]->arrival) {
+                        if (scheduler_type == 4) {
                             if (p->est_remaining_run_time - local >= list_of_processes.queue_size[index]->est_remaining_run_time) {
                                 preempt = 1;
                             }
-                            else {
+                            else{
                                 preempt = 0;
                                 index++;
                             }
                         }
-                        else if (scheduler_type == 5 && clock == list_of_processes.queue_size[index]->arrival) {
+                        else if (scheduler_type == 5) {
                             if (p->priority >= list_of_processes.queue_size[index]->priority) {
                                 preempt = 1;
                             }
@@ -365,18 +359,18 @@ int main(int argc, char *argv[]) {
                                 preempt = 0;
                                 index++;
                             }
-                        }
 
-                        if (preempt == 1) {
-                            printf("PREEMPTED\n");
-                            fd = open(link, O_WRONLY);
-                            write(fd, &preempt, sizeof(int));
-                            close(fd);
-                            preempt = 0;
-                            index = 0;
-                            printf("---\n");
-                            break; 
                         }
+                    }
+                    if (preempt == 1) {
+                        printf("PREEMPTED\n");
+                        fd = open(link, O_WRONLY);
+                        write(fd, &preempt, sizeof(int));
+                        close(fd);
+                        preempt = 0;
+                        index = 0;
+                        printf("---\n");
+                        break; 
                     }
                     fd = open(link, O_WRONLY);
                     write(fd, &preempt, sizeof(int));
@@ -386,64 +380,133 @@ int main(int argc, char *argv[]) {
                     fd = open(link, O_RDONLY);
                     read(fd, &local, sizeof(int));
                     close(fd);
-                    usleep(1000);
+                    usleep(1500);
                     if (local == time_quantum || local == p->est_remaining_run_time) break;
 
                     fd = open(link, O_RDONLY);
                     read(fd, &clock, sizeof(int));
                     close(fd);
                     usleep(200);
-                    }
                 }
-                // Process in dealing with process is the same in both preemptive and non-preemptive
-                // Receive updated PCB from the CPU Emulator
-                printf("RECEVING\n");
+            }
+            if (scheduler_type <= 2) {
                 fd = open(link, O_RDONLY);
-                read(fd, buffer, sizeof(buffer));
+                read(fd, &clock, sizeof(int));
                 close(fd);
-                usleep(200);
+                usleep(300);
+            }
+            // Process in dealing with process is the same in both preemptive and non-preemptive
+            // Receive updated PCB from the CPU Emulator
+            printf("RECEVING\n");
+            fd = open(link, O_RDONLY);
+            read(fd, buffer, sizeof(buffer));
+            close(fd);
+            usleep(200);
 
-                // Read file from buffer and store it into the BLOCK array
-                memcpy(p->BLOCK, buffer, sizeof(p->BLOCK));
-                p->est_remaining_run_time = strtol(p->BLOCK[7], NULL, 0);
+            // Read file from buffer and store it into the BLOCK array
+            memcpy(p->BLOCK, buffer, sizeof(p->BLOCK));
+            p->est_remaining_run_time = strtol(p->BLOCK[7], NULL, 0);
 
+            // Preemptive
+            if (scheduler_type >= 3) {
                 // If the remaining running time is not zero, we add it back into the queue
-                if (scheduler_type >= 3) {
-                    if (p->est_remaining_run_time > 0) {
-                        printf("Process [%s] has returned to the queue with remaining: %d\n", p->process_name, p->est_remaining_run_time);
-                        enqueue(&ready_queue, p);
-                        number_of_context_switches++;
-                    }
-                    else {
-                        printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
-                        p = NULL;
-                        ready_queue.current_size--;
-                        number_of_context_switches++;
-                    }
+                if (p->est_remaining_run_time > 0) {
+                    printf("Process [%s] has returned to the queue with remaining: %d\n", p->process_name, p->est_remaining_run_time);
+                    enqueue(&ready_queue, p);
+                    number_of_context_switches++;
                 }
                 // Otherwise, remove it from the queue and decrement the queue size
                 else {
                     printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
+                    p->completed_time = clock;
+                    p->turnaround_time = p->completed_time - p->arrival;
+                    p->wait_time = p->completed_time - p->est_total_run_time;
+
+                    completed_jobs.current_size++;
+                    enqueue(&completed_jobs, p);
                     p = NULL;
                     ready_queue.current_size--;
                     number_of_context_switches++;
                 }
             }
-            // If no processes in ready queue, send a integer to indicate that there are no processes in ready_queue
-            // Value indicated by -1
+            // Non-Preemptive
+            // Otherwise, remove it from the queue and decrement the queue size
             else {
-                printf("No process exists at time: %d\n", clock);
-                process_exists = (list_of_processes.current_size == 0) ? -1 : 0;
-                fd = open(link, O_WRONLY);
-                write(fd, &process_exists, sizeof(int));
-                close(fd);
-                usleep(200);
-            }
-            printf("-------------\n");
-            usleep(1000);
-        }
-        printf("Number of context switches: %d\n", number_of_context_switches);
-        printf("Clock time: %ds\n", clock);
-        return 0;
+                printf("Process [%s] has finished and has been removed from the queue completely\n", p->process_name);
+                p->completed_time = clock;
+                p->turnaround_time = p->completed_time - p->arrival;
+                p->wait_time = p->completed_time - p->est_total_run_time;
 
+                completed_jobs.current_size++;
+                enqueue(&completed_jobs, p);
+                p = NULL;
+                ready_queue.current_size--;
+                number_of_context_switches++;
+            }
+        }
+        // If no processes in ready queue, send a integer to indicate that there are no processes in ready_queue
+        // Value indicated by -1
+        else {
+            printf("No process exists at time: %d\n", clock);
+            process_exists = (list_of_processes.current_size == 0) ? -1 : 0;
+            fd = open(link, O_WRONLY);
+            write(fd, &process_exists, sizeof(int));
+            close(fd);
+            usleep(200);
+        }
+        printf("-------------\n");
+        usleep(1000);
     }
+
+    FILE *fp;
+    if (scheduler_type == 0) {
+        fp = fopen("FCFS.txt", "w");
+    }
+    else if (scheduler_type == 1) {
+        fp = fopen("SJN.txt", "w");
+    }
+    else if (scheduler_type == 2) {
+        fp = fopen("Priority.txt", "w");
+    }
+    else if (scheduler_type == 3) {
+        if (atoi(argv[3]) == 10) {
+            fp = fopen("RR_FCFS_10.txt", "w");
+        }
+        else if (atoi(argv[3]) == 100) {
+            fp = fopen("RR_FCFS_100.txt", "w");
+        }
+        else {
+            fp = fopen("RR_FCFS_1000.txt", "w");
+        }
+    }
+    else if (scheduler_type == 4) {
+        fp = fopen("RR_SRTN.txt", "w");
+    }
+    else {
+        fp = fopen("RR_PRIORITY.txt", "w");
+    }
+
+    printf("Process Name\tCompleted Time\tTurnaround Time\t\tWait Time\n");
+    fprintf(fp,"Process Name,Completed Time,Turnaround Time,Wait Time\n");
+    for (int i = 0; i < NUMBER_OF_PCBS; i++) {
+        if (strlen(completed_jobs.queue_size[i]->process_name) > 5) {
+            printf("%s:\t%d\t\t%d\t\t\t%d\n", completed_jobs.queue_size[i]->process_name, completed_jobs.queue_size[i]->completed_time,
+                completed_jobs.queue_size[i]->turnaround_time, completed_jobs.queue_size[i]->wait_time);
+            fprintf(fp,"%s,%d,%d,%d\n", completed_jobs.queue_size[i]->process_name, completed_jobs.queue_size[i]->completed_time,
+                completed_jobs.queue_size[i]->turnaround_time, completed_jobs.queue_size[i]->wait_time);
+        }
+        else {
+            printf("%s:\t\t%d\t\t%d\t\t\t%d\n", completed_jobs.queue_size[i]->process_name, completed_jobs.queue_size[i]->completed_time,
+                completed_jobs.queue_size[i]->turnaround_time, completed_jobs.queue_size[i]->wait_time);
+            fprintf(fp,"%s,%d,%d,%d\n", completed_jobs.queue_size[i]->process_name, completed_jobs.queue_size[i]->completed_time,
+                completed_jobs.queue_size[i]->turnaround_time, completed_jobs.queue_size[i]->wait_time);
+        }
+    }
+    printf("Number of context switches: %d\n", number_of_context_switches);
+    fprintf(fp,"Number of context switches: %d\n", number_of_context_switches);
+    printf("Clock time: %ds\n", clock);
+    fprintf(fp, "Clock time: %ds\n", clock);
+    fclose(fp);
+    return 0;
+
+}

@@ -96,8 +96,8 @@ int main(int argc, char *argv[]) {
 
         // If a process is available on the ready queue
         else {
-            printf("PCB RECEIVED\n");
             // Open up the named pipe and read from it
+            printf("PCB RECEIVED\n");
             fd = open(link, O_RDONLY);
             read(fd, RECEIVED_PCB_INFO, sizeof(RECEIVED_PCB_INFO));
             close(fd);
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
                     usleep(1000);
                     if (local == time_quantum || local == retreived_time) break;
 
-                    // Increment clock 
+                    // Update global clock to send back to scheduler
                     clock++;
                     fd = open(link, O_WRONLY);
                     write(fd, &clock, sizeof(int));
@@ -153,6 +153,12 @@ int main(int argc, char *argv[]) {
                 sprintf(RECEIVED_PCB_INFO[7], "%d", retreived_time);
                 printf("Current Clock: %d\n", clock);
             }
+            if (scheduler_type <= 2) {
+                fd = open(link, O_WRONLY);
+                write(fd, &clock, sizeof(int));
+                close(fd);
+                usleep(300);
+            }
             // Send the PCB back to the scheduler to handle
             printf("Sending PCB\n");
             fd = open(link, O_WRONLY);
@@ -168,7 +174,7 @@ int main(int argc, char *argv[]) {
             write(fd, &clock, sizeof(clock));
             printf("CLOCK TIME %d sent to SCHEDULER\n", clock);
             close(fd);
-            usleep(200);
+            usleep(1000);
         }
     }
 }
