@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
 
             int retreived_time = strtol(RECEIVED_PCB_INFO[7], NULL, 10);
             printf("Process: [%s], Current Run time is: [%d]\n", RECEIVED_PCB_INFO[1], retreived_time);
-            usleep(200);
+            usleep(500);
 
             // Update time after running on CPU
             if (scheduler_type >= 3) {
@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
                     fd = open(link, O_WRONLY);
                     write(fd, &local, sizeof(int));
                     close(fd);
-                    usleep(1000);
+                    usleep(1500);
                     if (local == time_quantum || local == retreived_time) break;
 
                     // Update global clock to send back to scheduler
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
                     fd = open(link, O_WRONLY);
                     write(fd, &clock, sizeof(int));
                     close(fd);
-                    usleep(200);
+                    usleep(500);
                 } 
                 // If process has been preempted or the local time_quantum has been acheived, then updated PCB info
                 if (preempt == 1 || local == time_quantum || local == retreived_time) {

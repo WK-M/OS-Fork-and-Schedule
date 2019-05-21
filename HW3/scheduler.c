@@ -331,7 +331,7 @@ int main(int argc, char *argv[]) {
             memcpy(buffer, p->BLOCK, sizeof(p->BLOCK));
 
             // Open named pipe to send PCB that was dequeued to the CPU Emulator
-            printf("Sent Process to PCB!\n");
+            printf("Sent %s to CPU!\n", p->process_name);
             fd = open(link, O_WRONLY);
             write(fd, buffer, sizeof(buffer));
             close(fd);
@@ -352,7 +352,8 @@ int main(int argc, char *argv[]) {
                             }
                         }
                         else if (scheduler_type == 5) {
-                            if (p->priority >= list_of_processes.queue_size[index]->priority) {
+                            printf("%s----\n", list_of_processes.queue_size[index]->process_name);
+                            if (p->priority <= list_of_processes.queue_size[index]->priority) {
                                 preempt = 1;
                             }
                             else {
@@ -386,7 +387,7 @@ int main(int argc, char *argv[]) {
                     fd = open(link, O_RDONLY);
                     read(fd, &clock, sizeof(int));
                     close(fd);
-                    usleep(200);
+                    usleep(500);
                 }
             }
             if (scheduler_type <= 2) {
@@ -488,6 +489,10 @@ int main(int argc, char *argv[]) {
 
     printf("Process Name\tCompleted Time\tTurnaround Time\t\tWait Time\n");
     fprintf(fp,"Process Name,Completed Time,Turnaround Time,Wait Time\n");
+    double average_turnaround_time = 0;
+    double average_wait_time = 0;
+    char *longest_process;
+    int longest_wait_time = 0;
     for (int i = 0; i < NUMBER_OF_PCBS; i++) {
         if (strlen(completed_jobs.queue_size[i]->process_name) > 5) {
             printf("%s:\t%d\t\t%d\t\t\t%d\n", completed_jobs.queue_size[i]->process_name, completed_jobs.queue_size[i]->completed_time,
@@ -501,11 +506,24 @@ int main(int argc, char *argv[]) {
             fprintf(fp,"%s,%d,%d,%d\n", completed_jobs.queue_size[i]->process_name, completed_jobs.queue_size[i]->completed_time,
                 completed_jobs.queue_size[i]->turnaround_time, completed_jobs.queue_size[i]->wait_time);
         }
+        average_turnaround_time += completed_jobs.queue_size[i]->turnaround_time;
+        average_wait_time +=  completed_jobs.queue_size[i]->wait_time;
+        if (completed_jobs.queue_size[i]->wait_time > longest_wait_time) {
+            longest_wait_time = completed_jobs.queue_size[i]->wait_time;
+            longest_process = completed_jobs.queue_size[i]->process_name;
+        }
     }
-    printf("Number of context switches: %d\n", number_of_context_switches);
-    fprintf(fp,"Number of context switches: %d\n", number_of_context_switches);
     printf("Clock time: %ds\n", clock);
     fprintf(fp, "Clock time: %ds\n", clock);
+    printf("Number of context switches: %d\n", number_of_context_switches);
+    fprintf(fp,"Number of context switches: %d\n", number_of_context_switches);
+    printf("Average Wait Time = %lf\n", average_wait_time/NUMBER_OF_PCBS);
+    fprintf(fp, "Average Wait Time = %lf\n", average_wait_time/NUMBER_OF_PCBS);
+    printf("Average Turnaround Time = %lf\n", average_turnaround_time/NUMBER_OF_PCBS);
+    fprintf(fp, "Average Turnaround Time = %lf\n", average_turnaround_time/NUMBER_OF_PCBS);
+    printf("Process [%s] with longest wait time: = %d\n", longest_process, longest_wait_time);
+    fprintf(fp, "Process [%s] with longest wait time: = %d\n", longest_process, longest_wait_time);
+
     fclose(fp);
     return 0;
 
